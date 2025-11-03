@@ -5,22 +5,32 @@ import { Button } from "@/components/ui/button";
 import { useAudio } from "./lib/stores/useAudio";
 
 function App() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<any>(null);
+  const initializedRef = useRef(false);
   const [isGameReady, setIsGameReady] = useState(false);
   const { playHit, playSuccess, setHitSound, setSuccessSound } = useAudio();
 
   useEffect(() => {
-    if (!canvasRef.current || gameRef.current) return;
+    if (initializedRef.current) return;
+    
+    if (!containerRef.current) {
+      console.error("Container ref is null, retrying...");
+      return;
+    }
+    
+    initializedRef.current = true;
+    console.log("Initializing Kaboom...");
 
     const k = kaboom({
-      canvas: canvasRef.current,
       width: window.innerWidth,
       height: window.innerHeight,
       background: [135, 206, 235],
       debug: true,
+      global: false,
     });
 
+    containerRef.current.appendChild(k.canvas);
     gameRef.current = k;
 
     let player: any;
@@ -235,7 +245,7 @@ function App() {
 
   return (
     <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
-      <canvas ref={canvasRef} style={{ display: "block" }} />
+      <div ref={containerRef} style={{ display: "block", width: "100%", height: "100%" }} />
       
       {isGameReady && (
         <div style={{
