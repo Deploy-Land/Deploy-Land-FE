@@ -1,10 +1,12 @@
-import kaplay, { type KaboomCtx } from "kaplay";
+import kaplay from "kaplay";
 import { loadCoreAssets, loadParallaxSprites } from "./assets";
 import { Player } from "./entities/Player";
 import { ObstacleManager } from "./entities/Obstacle";
 import { Goal } from "./entities/Goal";
 import { MapSystem } from "./systems/MapSystem";
 import { ParallaxSystem } from "./systems/ParallaxSystem";
+import { getMockMovementPath } from "../mock/movement-paths";
+import type { MovementPath } from "../types/movement";
 
 export interface GameCoreConfig {
   width: number;
@@ -12,14 +14,10 @@ export interface GameCoreConfig {
   debug?: boolean;
 }
 
-export interface MovementPath {
-  direction: string;
-  distance: number;
-  hasObstacle: boolean;
-}
+type KaplayInstance = ReturnType<typeof kaplay>;
 
 export class GameCore {
-  private k: KaboomCtx;
+  private k: KaplayInstance;
   private player: Player;
   private obstacleManager: ObstacleManager;
   private goal: Goal;
@@ -99,8 +97,7 @@ export class GameCore {
     }
 
     try {
-      const response = await fetch("/api/movement-path");
-      const data = await response.json();
+      const data = await getMockMovementPath();
       this.currentPath = data;
 
       console.log("Movement path received:", data);
@@ -115,7 +112,7 @@ export class GameCore {
       const targetX = this.player.position.x + data.distance;
       await this.player.moveToPosition(targetX);
     } catch (error) {
-      console.error("Failed to fetch movement path:", error);
+      console.error("Failed to load mock movement path:", error);
     }
   }
 
