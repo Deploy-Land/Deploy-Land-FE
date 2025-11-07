@@ -1,5 +1,8 @@
-import kaplay, { type KaboomCtx } from "kaplay";
-type GameObj = ReturnType<ReturnType<typeof kaplay>["add"]>;
+import kaplay from "kaplay";
+
+type KaboomCtx = ReturnType<typeof kaplay>;
+type GameObj = ReturnType<KaboomCtx["add"]> & Record<string, any>;
+type UpdateHandle = ReturnType<KaboomCtx["onUpdate"]>;
 
 export interface PlayerConfig {
   x: number;
@@ -11,6 +14,8 @@ export class Player {
   private k: KaboomCtx;
   private gameObj: GameObj | null = null;
   private boneObj: GameObj | null = null;
+  private boneFollowController: UpdateHandle | null = null;
+  private scaleAnimationHandle: UpdateHandle | null = null;
   private isMoving = false;
 
   constructor(k: KaboomCtx) {
@@ -67,47 +72,7 @@ export class Player {
     this.gameObj.onCollide("goal", () => {
       if (this.isMoving) {
         console.log("Goal reached!");
-        this.isMoving = false;
-        this.k.play("success");
-
-        // 뼈다귀가 아직 없으면 머리 위에 추가
-        if (!this.boneObj && this.gameObj) {
-          this.boneObj = this.k.add([
-            this.k.sprite("bone"),
-            this.k.pos(this.gameObj.pos.x + 35, this.gameObj.pos.y - 70), // x축 오른쪽 35px, y축 위 70px 이동
-            this.k.anchor("center"),
-            this.k.z(11), // 플레이어보다 위에
-            "bone",
-          ]);
-          
-          // width와 height를 100px로 고정
-          this.boneObj.width = 100;
-          this.boneObj.height = 100;
-
-          // 뼈다귀가 플레이어를 따라다니도록
-          this.k.onUpdate(() => {
-            if (this.boneObj && this.gameObj) {
-              this.boneObj.pos.x = this.gameObj.pos.x + 35; // x축 오른쪽 35px 이동
-              this.boneObj.pos.y = this.gameObj.pos.y - 70; // y축 위 70px 이동
-            }
-          });
-        }
-
-        // 성공 시 사이즈를 키우는 간단한 확대 애니메이션 (0.3 -> 0.5)
-        let t = 0;
-        const startScale = 0.3;
-        const endScale = 0.5;
-        const duration = 0.35;
-        const growInterval = this.k.onUpdate(() => {
-          if (!this.gameObj) return;
-          t += this.k.dt();
-          const p = Math.min(1, t / duration);
-          const s = startScale * (1 - p) + end*Scale* p;
-          this.gameObj.scale = this.k.vec2(s);
-          if (p >= 1) {
-            try { growInterval.cancel(); } catch {}
-          }
-        });
+        this.triggerSuccess();
       }
     });
   }
@@ -172,9 +137,13 @@ export class Player {
     this.gameObj.use(this.k.sprite("shiba_1")); // 첫 번째 프레임으로 초기화
     
     // 뼈다귀 제거
-    if (this.boneObj) {
-      this.boneObj.destroy();
-      this.boneObj = null;
+    this.removeBone();
+    if (this.scaleAnimationHandle) {
+      try {
+        this.scaleAnimationHandle.cancel();
+      } finally {
+        this.scaleAnimationHandle = null;
+      }
     }
     
     this.isMoving = false;
@@ -194,44 +163,9 @@ export class Player {
     
     this.isMoving = false;
     this.k.play("success");
-    
-    // 뼈다귀가 아직 없으면 머리 위에 추가
-    if (!this.boneObj) {
-      this.boneObj = this.k.add([
-        this.k.sprite("bone"),
-        this.k.pos(this.gameObj.pos.x + 40, this.gameObj.pos.y - 20), // x축 오른쪽 40px, y축 위 20px 이동
-        this.k.anchor("center"),
-        this.k.z(11), // 플레이어보다 위에
-        "bone",
-      ]);
-      
-      // width와 height를 100px로 고정
-      this.boneObj.width = 100;
-      this.boneObj.height = 100;
-
-      // 뼈다귀가 플레이어를 따라다니도록
-      this.k.onUpdate(() => {
-        if (this.boneObj && this.gameObj) {
-          this.boneObj.pos.x = this.gameObj.pos.x + 40; // x축 오른쪽 40px 이동
-          this.boneObj.pos.y = this.gameObj.pos.y - 20; // y축 위 20px 이동
-        }
-      });
-    }
-    
-    let rotation = 0;
-    const celebrateInterval = this.k.onUpdate(() => {
-      if (!this.gameObj) return;
-      
-      rotation += this.k.dt() * 10;
-      this.gameObj.angle = Math.sin(rotation) * 20;
-          this.gameObj.scale = this.k.vec2(0.35 + Math.sin(rotation * 2) * 0.15);
-      
-      if (rotation > Math.PI * 4) {
-        celebrateInterval.cancel();
-            this.gameObj.angle = 0;
-            this.gameObj.scale = this.k.vec2(0.5);
-      }
-    });
+    this.gameObj.angle = 0;
+    this.spawnTemporaryBone(40, -70, 0.5);
+    this.animateScaleTo(0.9, 0.45);
   }
 
   triggerFailure() {
@@ -244,6 +178,94 @@ export class Player {
     this.k.wait(0.5, () => {
       if (this.gameObj) {
         this.gameObj.pos.x -= 50;
+      }
+    });
+  }
+
+  private spawnTemporaryBone(offsetX: number, offsetY: number, lifetime = 0.6) {
+    if (!this.gameObj) return;
+
+    this.removeBone();
+
+    const bone = this.k.add([
+      this.k.sprite("bone"),
+      this.k.pos(this.gameObj.pos.x + offsetX, this.gameObj.pos.y + offsetY),
+      this.k.anchor("center"),
+      this.k.z(11),
+      "bone",
+    ]);
+
+    bone.width = 100;
+    bone.height = 100;
+
+    this.boneObj = bone;
+    this.boneFollowController = this.k.onUpdate(() => {
+      if (!this.boneObj || !this.gameObj) {
+        return;
+      }
+      this.boneObj.pos.x = this.gameObj.pos.x + offsetX;
+      this.boneObj.pos.y = this.gameObj.pos.y + offsetY;
+    });
+
+    this.k.wait(lifetime, () => {
+      if (this.boneObj === bone) {
+        this.removeBone();
+      }
+    });
+  }
+
+  private removeBone() {
+    if (this.boneFollowController) {
+      try {
+        this.boneFollowController.cancel();
+      } catch (error) {
+        console.warn("Failed to cancel bone follow controller", error);
+      }
+      this.boneFollowController = null;
+    }
+
+    if (this.boneObj) {
+      this.boneObj.destroy();
+      this.boneObj = null;
+    }
+  }
+
+  private animateScaleTo(targetScale: number, duration = 0.45) {
+    if (!this.gameObj) return;
+
+    if (this.scaleAnimationHandle) {
+      try {
+        this.scaleAnimationHandle.cancel();
+      } catch (error) {
+        console.warn("Failed to cancel scale animation", error);
+      }
+      this.scaleAnimationHandle = null;
+    }
+
+    const startScale = this.gameObj.scale?.x ?? 0.3;
+    if (Math.abs(startScale - targetScale) < 0.001) {
+      this.gameObj.scale = this.k.vec2(targetScale);
+      return;
+    }
+
+    let elapsed = 0;
+    this.scaleAnimationHandle = this.k.onUpdate(() => {
+      if (!this.gameObj) {
+        return;
+      }
+
+      elapsed += this.k.dt();
+      const progress = Math.min(elapsed / duration, 1);
+      const currentScale = startScale + (targetScale - startScale) * progress;
+      this.gameObj.scale = this.k.vec2(currentScale);
+
+      if (progress >= 1 && this.scaleAnimationHandle) {
+        try {
+          this.scaleAnimationHandle.cancel();
+        } finally {
+          this.scaleAnimationHandle = null;
+        }
+        this.gameObj.scale = this.k.vec2(targetScale);
       }
     });
   }
