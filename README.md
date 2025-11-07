@@ -1,4 +1,4 @@
-## KaboomSetting
+## Deploy-Land-FE
 
 간단한 Express + Vite(React) 통합 프로젝트입니다. 서버가 개발 모드에서는 Vite 미들웨어로 클라이언트를 함께 서빙하고, 프로덕션에서는 빌드 산출물을 정적으로 서빙합니다.
 
@@ -35,7 +35,7 @@ npm start                # 기본 5000, 필요 시 PORT 설정
 
 ### 프로젝트 구조
 ```text
-KaboomSetting/
+Deploy-Land-FE/
   client/
     index.html
     public/
