@@ -30,32 +30,32 @@ export function Landing() {
             {t("landing.heroTitle")}
           </h1>
           
-          <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-slate-900 dark:text-slate-200 mb-8 max-w-2xl mx-auto">
             {t("landing.heroSubtitle")}
           </p>
 
           {/* Features */}
           <div id="features" className="grid md:grid-cols-3 gap-6 mt-12 mb-12">
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700">
+            <div className="bg-white/80 text-slate-900 dark:bg-gray-800/60 dark:text-slate-100 backdrop-blur-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
               <div className="text-4xl mb-4">🏗️</div>
-              <h3 className="text-xl font-semibold text-white mb-2">{t("landing.buildTitle")}</h3>
-              <p className="text-gray-400">
+              <h3 className="text-xl font-semibold mb-2">{t("landing.buildTitle")}</h3>
+              <p className="text-sm md:text-base">
                 {t("landing.buildDescription")}
               </p>
             </div>
             
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700">
+            <div className="bg-white/80 text-slate-900 dark:bg-gray-800/60 dark:text-slate-100 backdrop-blur-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
               <div className="text-4xl mb-4">🧪</div>
-              <h3 className="text-xl font-semibold text-white mb-2">{t("landing.testTitle")}</h3>
-              <p className="text-gray-400">
+              <h3 className="text-xl font-semibold mb-2">{t("landing.testTitle")}</h3>
+              <p className="text-sm md:text-base">
                 {t("landing.testDescription")}
               </p>
             </div>
             
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700">
+            <div className="bg-white/80 text-slate-900 dark:bg-gray-800/60 dark:text-slate-100 backdrop-blur-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700">
               <div className="text-4xl mb-4">🚀</div>
-              <h3 className="text-xl font-semibold text-white mb-2">{t("landing.deployTitle")}</h3>
-              <p className="text-gray-400">
+              <h3 className="text-xl font-semibold mb-2">{t("landing.deployTitle")}</h3>
+              <p className="text-sm md:text-base">
                 {t("landing.deployDescription")}
               </p>
             </div>
@@ -76,8 +76,8 @@ export function Landing() {
           </div>
 
           {/* Additional Info */}
-          <div className="mt-16 pt-8 border-t border-gray-700">
-            <p className="text-gray-700 dark:text-gray-300 text-sm">
+          <div className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-slate-900 dark:text-slate-200 text-sm">
               {t("landing.footerNote")}
             </p>
           </div>
