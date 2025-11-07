@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 
 interface GameControlsProps {
@@ -7,6 +8,8 @@ interface GameControlsProps {
 }
 
 export function GameControls({ onStartMovement, onReset, onStageTest }: GameControlsProps) {
+  const { t } = useTranslation();
+
   return (
     <div style={{
       position: "absolute",
@@ -27,7 +30,7 @@ export function GameControls({ onStartMovement, onReset, onStageTest }: GameCont
             fontSize: "16px",
           }}
         >
-          API로 이동 시작
+          {t("game.start")}
         </Button>
         <Button
           onClick={onReset}
@@ -39,13 +42,13 @@ export function GameControls({ onStartMovement, onReset, onStageTest }: GameCont
             fontSize: "16px",
           }}
         >
-          리셋
+          {t("game.reset")}
         </Button>
       </div>
 
       {/* Build 단계 테스트 */}
       <div style={{ display: "flex", gap: "5px", flexDirection: "column" }}>
-        <div style={{ color: "white", fontSize: "12px", marginBottom: "5px" }}>Build 공장</div>
+        <div style={{ color: "white", fontSize: "12px", marginBottom: "5px" }}>{t("game.buildZone")}</div>
         <div style={{ display: "flex", gap: "5px" }}>
           <Button
             onClick={() => onStageTest("Build", true)}
@@ -56,7 +59,7 @@ export function GameControls({ onStartMovement, onReset, onStageTest }: GameCont
               fontSize: "14px",
             }}
           >
-            성공
+            {t("game.success")}
           </Button>
           <Button
             onClick={() => onStageTest("Build", false)}
@@ -67,14 +70,14 @@ export function GameControls({ onStartMovement, onReset, onStageTest }: GameCont
               fontSize: "14px",
             }}
           >
-            실패
+            {t("game.failure")}
           </Button>
         </div>
       </div>
 
       {/* Test 단계 테스트 */}
       <div style={{ display: "flex", gap: "5px", flexDirection: "column" }}>
-        <div style={{ color: "white", fontSize: "12px", marginBottom: "5px" }}>Test 코스</div>
+        <div style={{ color: "white", fontSize: "12px", marginBottom: "5px" }}>{t("game.testZone")}</div>
         <div style={{ display: "flex", gap: "5px" }}>
           <Button
             onClick={() => onStageTest("Test", true)}
@@ -85,7 +88,7 @@ export function GameControls({ onStartMovement, onReset, onStageTest }: GameCont
               fontSize: "14px",
             }}
           >
-            성공
+            {t("game.success")}
           </Button>
           <Button
             onClick={() => onStageTest("Test", false)}
@@ -96,14 +99,14 @@ export function GameControls({ onStartMovement, onReset, onStageTest }: GameCont
               fontSize: "14px",
             }}
           >
-            실패
+            {t("game.failure")}
           </Button>
         </div>
       </div>
 
       {/* Deploy 단계 테스트 */}
       <div style={{ display: "flex", gap: "5px", flexDirection: "column" }}>
-        <div style={{ color: "white", fontSize: "12px", marginBottom: "5px" }}>Deploy 도시</div>
+        <div style={{ color: "white", fontSize: "12px", marginBottom: "5px" }}>{t("game.deployZone")}</div>
         <div style={{ display: "flex", gap: "5px" }}>
           <Button
             onClick={() => onStageTest("Deploy", true)}
@@ -114,7 +117,7 @@ export function GameControls({ onStartMovement, onReset, onStageTest }: GameCont
               fontSize: "14px",
             }}
           >
-            성공
+            {t("game.success")}
           </Button>
           <Button
             onClick={() => onStageTest("Deploy", false)}
@@ -125,7 +128,7 @@ export function GameControls({ onStartMovement, onReset, onStageTest }: GameCont
               fontSize: "14px",
             }}
           >
-            실패
+            {t("game.failure")}
           </Button>
         </div>
       </div>
