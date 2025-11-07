@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
+import { CICDStatusModal } from "../components/CICDStatusModal";
 
 export function Landing() {
   return (
@@ -64,13 +65,7 @@ export function Landing() {
               </Button>
             </Link>
             
-            <Button 
-              size="lg" 
-              variant="outline"
-              className="text-lg px-8 py-6 border-gray-600 text-gray-300 hover:bg-gray-800"
-            >
-              문서 보기
-            </Button>
+            <CICDStatusModal />
           </div>
 
           {/* Additional Info */}
