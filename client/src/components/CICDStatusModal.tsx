@@ -43,7 +43,7 @@ export function CICDStatusModal() {
           {t("landing.ctaDocs")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl sm:max-w-3xl">
+      <DialogContent className="max-w-2xl sm:max-w-3xl bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
         <DialogHeader className="space-y-2">
           <DialogTitle>{t("modal.title")}</DialogTitle>
           <DialogDescription>

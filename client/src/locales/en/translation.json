@@ -37,7 +37,8 @@
   "language": {
     "label": "Language",
     "english": "English",
-    "korean": "Korean"
+    "korean": "Korean",
+    "japanese": "Japanese"
   },
   "game": {
     "start": "Start API Movement",
