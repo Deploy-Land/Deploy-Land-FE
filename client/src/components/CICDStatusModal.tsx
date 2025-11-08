@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,7 @@ const errorResponseExample = `{
 }`;
 
 export function CICDStatusModal() {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopyFailure = async () => {
@@ -38,14 +40,14 @@ export function CICDStatusModal() {
           variant="outline"
           className="text-lg px-8 py-6 border-gray-600 text-gray-300 hover:bg-gray-800"
         >
-          문서 보기
+          {t("landing.ctaDocs")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl sm:max-w-3xl">
+      <DialogContent className="max-w-2xl sm:max-w-3xl bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
         <DialogHeader className="space-y-2">
-          <DialogTitle>CI/CD 상태 조회 API</DialogTitle>
+          <DialogTitle>{t("modal.title")}</DialogTitle>
           <DialogDescription>
-            파이프라인 상태를 조회하기 위한 REST 엔드포인트 상세 정보입니다.
+            {t("modal.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -60,17 +62,16 @@ export function CICDStatusModal() {
               </code>
             </div>
             <p>
-              유효한 <span className="font-medium">pipelineId</span>가 전달되고 DynamoDB에 해당 항목이 존재하는 경우,
-              파이프라인의 현재 상태, 전체 Job 목록, 총 Job 개수를 포함한 모든 상태 정보를 JSON으로 반환합니다.
+            {t("modal.successDescription")}
             </p>
           </section>
 
           <section className="space-y-2 text-foreground">
-            <h3 className="text-sm font-semibold">정상 응답 포함 정보</h3>
+            <h3 className="text-sm font-semibold">{t("modal.successSummary")}</h3>
             <ul className="list-disc space-y-1 pl-5 text-sm">
-              <li>파이프라인 전체 상태 요약</li>
-              <li>각 Job의 세부 상태, 실행 순서 및 메타데이터</li>
-              <li>전체 Job 개수와 완료 비율</li>
+              <li>{t("modal.successItem1")}</li>
+              <li>{t("modal.successItem2")}</li>
+              <li>{t("modal.successItem3")}</li>
             </ul>
           </section>
 
@@ -78,9 +79,9 @@ export function CICDStatusModal() {
 
           <section className="space-y-3 text-foreground">
             <div>
-              <h3 className="text-sm font-semibold">잘못된 요청 (400 Bad Request)</h3>
+              <h3 className="text-sm font-semibold">{t("modal.failureTitle")}</h3>
               <p className="text-sm text-muted-foreground">
-                경로 파라미터에 <span className="font-medium">pipelineId</span>가 누락된 경우 아래와 같은 JSON 오류 응답이 반환됩니다.
+                {t("modal.failureDescription")}
               </p>
             </div>
             <Button
@@ -89,7 +90,7 @@ export function CICDStatusModal() {
               className="w-fit"
               onClick={handleCopyFailure}
             >
-              {copied ? "복사 완료" : "실패 응답 복사"}
+              {copied ? t("modal.copySuccess") : t("modal.copyFailure")}
             </Button>
             <pre className="overflow-x-auto rounded-md bg-slate-900 p-4 text-xs text-slate-100">
 {errorResponseExample}

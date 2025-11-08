@@ -1,0 +1,52 @@
+{
+  "app": {
+    "name": "Deploy Land"
+  },
+  "navigation": {
+    "play": "プレイ",
+    "features": "機能"
+  },
+  "landing": {
+    "heroTitle": "Deploy Land",
+    "heroSubtitle": "可視化されたゲームでデプロイパイプラインを追跡・監視しましょう。",
+    "buildTitle": "Build",
+    "buildDescription": "コードビルドの状況をリアルタイムで追跡",
+    "testTitle": "Test",
+    "testDescription": "テスト実行結果を視覚的に確認",
+    "deployTitle": "Deploy",
+    "deployDescription": "デプロイプロセスをゲームとして体験",
+    "ctaStart": "はじめる",
+    "ctaDocs": "ドキュメントを見る",
+    "footerNote": "パイプラインをリアルタイムで監視し、成功と失敗をゲームで体験しましょう。",
+    "ctaTitle": "今すぐ探索しましょう",
+    "ctaDescription": "ゲームを開始するかドキュメントで Deploy Land の仕組みを学びましょう。"
+  },
+  "modal": {
+    "title": "CI/CD ステータス API",
+    "description": "パイプライン状態を取得するための REST エンドポイントの詳細です。",
+    "successDescription": "有効な pipelineId が DynamoDB に存在する場合、パイプラインの現在の状態、全ジョブ一覧、総ジョブ数を JSON として返します。",
+    "successSummary": "正常レスポンスの内容",
+    "successItem1": "パイプライン全体の状態サマリー",
+    "successItem2": "各ジョブの詳細状態、順序、メタデータ",
+    "successItem3": "ジョブ総数と完了率",
+    "failureTitle": "無効なリクエスト (400 Bad Request)",
+    "failureDescription": "パスパラメータに pipelineId が含まれていない場合、次の JSON エラーが返されます。",
+    "copyFailure": "失敗レスポンスをコピー",
+    "copySuccess": "コピー完了"
+  },
+  "language": {
+    "label": "言語",
+    "english": "英語",
+    "korean": "韓国語",
+    "japanese": "日本語"
+  },
+  "game": {
+    "start": "API への移動開始",
+    "reset": "リセット",
+    "buildZone": "Build 工場",
+    "testZone": "Test コース",
+    "deployZone": "Deploy シティ",
+    "success": "成功",
+    "failure": "失敗"
+  }
+}

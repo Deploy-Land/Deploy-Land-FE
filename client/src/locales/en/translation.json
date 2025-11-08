@@ -1,0 +1,54 @@
+{
+  "app": {
+    "name": "Deploy Land"
+  },
+  "navigation": {
+    "play": "Play",
+    "features": "Features"
+  },
+  "landing": {
+    "heroTitle": "Deploy Land",
+    "heroSubtitle": "Track and monitor your deployment pipeline with a playful visualization.",
+    "buildTitle": "Build",
+    "buildDescription": "Track code build status in real time",
+    "testTitle": "Test",
+    "testDescription": "Visualize and review test executions",
+    "deployTitle": "Deploy",
+    "deployDescription": "Experience the deployment process as a game",
+    "ctaStart": "Get Started",
+    "ctaDocs": "View Docs",
+    "footerNote": "Monitor pipeline status in real time and experience success or failure through gameplay.",
+    "ctaTitle": "Ready to explore?",
+    "ctaDescription": "Jump into the game or read the documentation to learn how Deploy Land works."
+  },
+  "modal": {
+    "title": "CI/CD Status API",
+    "description": "Detailed information for the pipeline status REST endpoint.",
+    "successDescription": "When a valid pipelineId exists in DynamoDB, the endpoint returns the pipeline's current status, full job list, and total job count as JSON.",
+    "successSummary": "Successful response includes",
+    "successItem1": "Overall pipeline status summary",
+    "successItem2": "Detailed state, order, and metadata of each job",
+    "successItem3": "Total number of jobs and completion rate",
+    "failureTitle": "Invalid Request (400 Bad Request)",
+    "failureDescription": "If the path parameter pipelineId is missing, the following JSON error is returned.",
+    "copyFailure": "Copy failure response",
+    "copySuccess": "Copied"
+  },
+  "language": {
+    "label": "Language",
+    "english": "English",
+    "korean": "Korean",
+    "japanese": "Japanese"
+  },
+  "game": {
+    "start": "Start API Movement",
+    "reset": "Reset",
+    "buildZone": "Build Zone",
+    "testZone": "Test Course",
+    "deployZone": "Deploy City",
+    "success": "Success",
+    "failure": "Failure"
+  }
+}
+
+
