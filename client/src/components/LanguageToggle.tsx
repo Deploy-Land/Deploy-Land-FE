@@ -4,21 +4,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export function LanguageToggle() {
   const { i18n, t } = useTranslation();
+  
+  // 현재 선택된 언어의 네이티브 이름 찾기
+  const currentLang = supportedLanguages.find((lang) => lang.code === i18n.language);
+  const currentLabel = currentLang?.nativeName || t("language.label");
 
   return (
     <Select
-      defaultValue={i18n.language}
+      value={i18n.language}
       onValueChange={(value) => {
         void i18n.changeLanguage(value);
       }}
     >
       <SelectTrigger className="w-[140px] bg-white/60 text-xs font-medium uppercase tracking-wide text-slate-700 dark:bg-black/40 dark:text-slate-200">
-        <SelectValue placeholder={t("language.label") as string} />
+        <SelectValue>{currentLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {supportedLanguages.map((lang) => (
           <SelectItem key={lang.code} value={lang.code} className="text-xs">
-            {t(lang.labelKey)}
+            {lang.nativeName}
           </SelectItem>
         ))}
       </SelectContent>

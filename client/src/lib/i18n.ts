@@ -31,9 +31,9 @@ void i18n
   });
 
 export const supportedLanguages = [
-  { code: "ko", labelKey: "language.korean" },
-  { code: "en", labelKey: "language.english" },
-  { code: "jp", labelKey: "language.japanese" },
+  { code: "ko", labelKey: "language.korean", nativeName: "한국어" },
+  { code: "en", labelKey: "language.english", nativeName: "English" },
+  { code: "jp", labelKey: "language.japanese", nativeName: "日本語" },
 ];
 
 export default i18n;
