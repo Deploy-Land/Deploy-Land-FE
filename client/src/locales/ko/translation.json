@@ -1,0 +1,54 @@
+{
+  "app": {
+    "name": "Deploy Land"
+  },
+  "navigation": {
+    "play": "플레이",
+    "features": "기능"
+  },
+  "landing": {
+    "heroTitle": "Deploy Land",
+    "heroSubtitle": "시각화된 게임으로 배포 파이프라인을 추적하고 모니터링하세요.",
+    "buildTitle": "Build",
+    "buildDescription": "코드 빌드 상태를 실시간으로 추적",
+    "testTitle": "Test",
+    "testDescription": "테스트 실행 결과를 시각적으로 확인",
+    "deployTitle": "Deploy",
+    "deployDescription": "배포 프로세스를 게임으로 시각화",
+    "ctaStart": "시작하기",
+    "ctaDocs": "문서 보기",
+    "footerNote": "파이프라인 상태를 실시간으로 모니터링하고, 성공과 실패를 게임으로 경험하세요.",
+    "ctaTitle": "지금 바로 탐험해 보세요",
+    "ctaDescription": "게임을 시작하거나 문서를 확인하여 Deploy Land의 동작 방식을 알아보세요."
+  },
+  "modal": {
+    "title": "CI/CD 상태 조회 API",
+    "description": "파이프라인 상태를 조회하기 위한 REST 엔드포인트 상세 정보입니다.",
+    "successDescription": "유효한 pipelineId가 DynamoDB에 존재하면, 파이프라인 현재 상태와 전체 Job 목록, 총 Job 개수를 JSON 형태로 반환합니다.",
+    "successSummary": "정상 응답 포함 정보",
+    "successItem1": "파이프라인 전체 상태 요약",
+    "successItem2": "각 Job의 세부 상태, 실행 순서 및 메타데이터",
+    "successItem3": "전체 Job 개수와 완료 비율",
+    "failureTitle": "잘못된 요청 (400 Bad Request)",
+    "failureDescription": "경로 파라미터에 pipelineId가 누락된 경우 아래와 같은 JSON 오류 응답이 반환됩니다.",
+    "copyFailure": "실패 응답 복사",
+    "copySuccess": "복사 완료"
+  },
+  "language": {
+    "label": "언어",
+    "english": "영어",
+    "korean": "한국어",
+    "japanese": "일본어"
+  },
+  "game": {
+    "start": "API로 이동 시작",
+    "reset": "리셋",
+    "buildZone": "Build 공장",
+    "testZone": "Test 코스",
+    "deployZone": "Deploy 도시",
+    "success": "성공",
+    "failure": "실패"
+  }
+}
+
+

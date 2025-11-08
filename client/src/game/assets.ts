@@ -1,4 +1,6 @@
 import type { KaboomCtx } from "kaplay";
+import { getBackgroundThemeByLanguage, backgroundConfigs } from "../lib/backgroundConfig";
+import i18n from "../lib/i18n";
 
 export function loadCoreAssets(k: KaboomCtx) {
   try {
@@ -31,11 +33,15 @@ export function loadCoreAssets(k: KaboomCtx) {
 
 export function loadParallaxSprites(k: KaboomCtx) {
   try {
-    k.loadSprite("bg_sky", "/parallax_mountain_pack/layers/parallax-mountain-bg.png");
-    k.loadSprite("bg_far", "/parallax_mountain_pack/layers/parallax-mountain-montain-far.png");
-    k.loadSprite("bg_mid", "/parallax_mountain_pack/layers/parallax-mountain-mountains.png");
-    k.loadSprite("bg_trees", "/parallax_mountain_pack/layers/parallax-mountain-trees.png");
-    k.loadSprite("bg_near", "/parallax_mountain_pack/layers/parallax-mountain-foreground-trees.png");
+    // 현재 언어에 맞는 배경 테마 가져오기
+    const theme = getBackgroundThemeByLanguage(i18n.language);
+    const background = backgroundConfigs[theme];
+    
+    k.loadSprite("bg_sky", background.sky);
+    k.loadSprite("bg_far", background.far);
+    k.loadSprite("bg_mid", background.mid);
+    k.loadSprite("bg_trees", background.trees);
+    k.loadSprite("bg_near", background.near);
   } catch {}
 }
 
