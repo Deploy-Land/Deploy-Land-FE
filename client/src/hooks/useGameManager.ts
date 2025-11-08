@@ -85,5 +85,6 @@ export function useGameManager() {
     handleStartMovement,
     handleReset,
     handleStageTest,
+    gameCoreRef: gameRef,
   };
 }
