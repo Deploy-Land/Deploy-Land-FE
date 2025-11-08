@@ -29,4 +29,8 @@ export class Goal {
 
     return this.gameObj;
   }
+
+  get position() {
+    return this.gameObj?.pos || { x: 0, y: 0 };
+  }
 }

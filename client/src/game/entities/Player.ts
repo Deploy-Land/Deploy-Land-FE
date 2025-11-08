@@ -16,6 +16,7 @@ export class Player {
   private boneObj: GameObj | null = null;
   private boneFollowController: UpdateHandle | null = null;
   private scaleAnimationHandle: UpdateHandle | null = null;
+  private idleAnimationHandle: UpdateHandle | null = null;
   private isMoving = false;
 
   constructor(k: KaboomCtx) {
@@ -39,6 +40,7 @@ export class Player {
     ]);
 
     this.setupCollisions();
+    this.startIdleAnimation();
     return this.gameObj;
   }
 
@@ -49,6 +51,7 @@ export class Player {
       if (this.isMoving) {
         console.log("Collision detected!");
         this.isMoving = false;
+        this.stopIdleAnimation();
         this.k.play("hit");
 
         obstacle.shake = 1;
@@ -65,6 +68,8 @@ export class Player {
           if (this.gameObj) {
             this.gameObj.pos.x -= 50;
           }
+          // 충돌 후 idle 애니메이션 재시작
+          this.startIdleAnimation();
         });
       }
     });
@@ -84,6 +89,9 @@ export class Player {
         return;
       }
 
+      // 움직임 시작 시 idle 애니메이션 중지
+      this.stopIdleAnimation();
+
       this.isMoving = true;
       const startX = this.gameObj.pos.x;
       const distance = targetX - startX;
@@ -95,11 +103,9 @@ export class Player {
 
       const moveInterval = this.k.onUpdate(() => {
         if (!this.isMoving || !this.gameObj) {
-          // 움직임이 멈추면 첫 번째 프레임으로 돌아감
-          if (this.gameObj) {
-            this.gameObj.use(this.k.sprite("shiba_1"));
-          }
+          // 움직임이 멈추면 idle 애니메이션 시작
           moveInterval.cancel();
+          this.startIdleAnimation();
           resolve();
           return;
         }
@@ -119,8 +125,9 @@ export class Player {
         
         if (progress >= 1) {
           this.isMoving = false;
-          this.gameObj.use(this.k.sprite("shiba_1")); // 정지 시 첫 번째 프레임
           moveInterval.cancel();
+          // 움직임이 끝나면 idle 애니메이션 시작
+          this.startIdleAnimation();
           resolve();
         }
       });
@@ -129,6 +136,8 @@ export class Player {
 
   reset(x: number, y: number) {
     if (!this.gameObj) return;
+    
+    this.stopIdleAnimation();
     
     this.gameObj.pos.x = x;
     this.gameObj.pos.y = y;
@@ -147,6 +156,8 @@ export class Player {
     }
     
     this.isMoving = false;
+    // 리셋 후 idle 애니메이션 시작
+    this.startIdleAnimation();
   }
 
   get position() {
@@ -157,20 +168,38 @@ export class Player {
     return this.isMoving;
   }
 
+  /**
+   * 플레이어 이동을 강제로 중단
+   */
+  stopMoving() {
+    if (this.isMoving && this.gameObj) {
+      this.isMoving = false;
+      this.stopIdleAnimation();
+      // 이동 중지 후 idle 애니메이션 시작
+      this.startIdleAnimation();
+    }
+  }
+
   // 외부에서 성공/실패 애니메이션 트리거
   triggerSuccess() {
     if (!this.gameObj) return;
     
-    this.isMoving = false;
+    // 이동 중지
+    this.stopMoving();
+    this.stopIdleAnimation();
+    
     this.k.play("success");
     this.gameObj.angle = 0;
     this.spawnTemporaryBone(40, -70, 0.5);
     this.animateScaleTo(0.9, 0.45);
+    // 성공 후에도 idle 애니메이션 계속 재생
+    this.startIdleAnimation();
   }
 
   triggerFailure() {
     if (!this.gameObj) return;
     
+    this.stopIdleAnimation();
     this.isMoving = false;
     this.k.play("hit");
     
@@ -179,6 +208,8 @@ export class Player {
       if (this.gameObj) {
         this.gameObj.pos.x -= 50;
       }
+      // 실패 후 idle 애니메이션 재시작
+      this.startIdleAnimation();
     });
   }
 
@@ -268,5 +299,49 @@ export class Player {
         this.gameObj.scale = this.k.vec2(targetScale);
       }
     });
+  }
+
+  /**
+   * 제자리에서 뛰는 애니메이션 시작
+   */
+  private startIdleAnimation() {
+    if (!this.gameObj || this.isMoving) return;
+    
+    // 이미 실행 중이면 중지
+    this.stopIdleAnimation();
+
+    let animationFrame = 1;
+    let animationTimer = 0;
+    const animationSpeed = 0.15; // 제자리 애니메이션 속도 (약간 느리게)
+
+    this.idleAnimationHandle = this.k.onUpdate(() => {
+      if (!this.gameObj || this.isMoving) {
+        this.stopIdleAnimation();
+        return;
+      }
+
+      animationTimer += this.k.dt();
+      
+      // 시바견 제자리 뛰기 애니메이션 (프레임 1-3 순환)
+      if (animationTimer >= animationSpeed) {
+        animationTimer = 0;
+        animationFrame = (animationFrame % 3) + 1;
+        this.gameObj.use(this.k.sprite(`shiba_${animationFrame}`));
+      }
+    });
+  }
+
+  /**
+   * 제자리 애니메이션 중지
+   */
+  private stopIdleAnimation() {
+    if (this.idleAnimationHandle) {
+      try {
+        this.idleAnimationHandle.cancel();
+      } catch (error) {
+        console.warn("Failed to cancel idle animation", error);
+      }
+      this.idleAnimationHandle = null;
+    }
   }
 }

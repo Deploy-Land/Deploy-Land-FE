@@ -1,7 +1,14 @@
+import { useTranslation } from "react-i18next";
 import { useParallax } from "../hooks/useParallax";
+import { getBackgroundThemeByLanguage, backgroundConfigs } from "../lib/backgroundConfig";
 
 export function ParallaxBackground() {
+  const { i18n } = useTranslation();
   const { skyRef, farRef, midRef, treesRef, nearRef } = useParallax();
+  
+  // 현재 언어에 맞는 배경 테마 가져오기
+  const theme = getBackgroundThemeByLanguage(i18n.language);
+  const background = backgroundConfigs[theme];
 
   return (
     <div
@@ -18,7 +25,7 @@ export function ParallaxBackground() {
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: "url('/parallax_mountain_pack/layers/parallax-mountain-bg.png')",
+          backgroundImage: `url('${background.sky}')`,
           backgroundRepeat: "repeat-x",
           backgroundSize: "auto 100%",
           backgroundPosition: "0px bottom",
@@ -30,7 +37,7 @@ export function ParallaxBackground() {
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: "url('/parallax_mountain_pack/layers/parallax-mountain-montain-far.png')",
+          backgroundImage: `url('${background.far}')`,
           backgroundRepeat: "repeat-x",
           backgroundSize: "auto 100%",
           backgroundPosition: "0px bottom",
@@ -42,7 +49,7 @@ export function ParallaxBackground() {
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: "url('/parallax_mountain_pack/layers/parallax-mountain-mountains.png')",
+          backgroundImage: `url('${background.mid}')`,
           backgroundRepeat: "repeat-x",
           backgroundSize: "auto 100%",
           backgroundPosition: "0px bottom",
@@ -54,7 +61,7 @@ export function ParallaxBackground() {
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: "url('/parallax_mountain_pack/layers/parallax-mountain-trees.png')",
+          backgroundImage: `url('${background.trees}')`,
           backgroundRepeat: "repeat-x",
           backgroundSize: "auto 100%",
           backgroundPosition: "0px bottom",
@@ -66,7 +73,7 @@ export function ParallaxBackground() {
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: "url('/parallax_mountain_pack/layers/parallax-mountain-foreground-trees.png')",
+          backgroundImage: `url('${background.near}')`,
           backgroundRepeat: "repeat-x",
           backgroundSize: "auto 100%",
           backgroundPosition: "0px bottom",

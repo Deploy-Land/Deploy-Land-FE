@@ -11,6 +11,43 @@ Vite(React) 기반의 Deploy Land 프런트엔드입니다. 모든 CI/CD 시나�
 - 정적 빌드: `npm run build`
 - 빌드 미리보기: `npm run preview`
 
+### 환경 변수 설정
+
+#### 로컬 개발
+`.env` 파일을 생성하여 API Gateway URL을 설정합니다:
+```bash
+VITE_API_BASE_URL=https://your-api-gateway-id.execute-api.region.amazonaws.com/stage
+```
+
+#### Amplify 배포
+Amplify는 `.env` 파일을 직접 읽지 않습니다. 다음 방법으로 환경 변수를 설정하세요:
+
+**방법 1: Amplify 콘솔에서 설정 (권장)**
+1. AWS Amplify 콘솔 → 앱 선택
+2. **App settings** → **Environment variables** 클릭
+3. **Manage variables** 클릭
+4. 다음 변수 추가:
+   - **Key**: `VITE_API_BASE_URL`
+   - **Value**: `https://your-api-gateway-id.execute-api.region.amazonaws.com/stage`
+5. **Save** 클릭
+6. 앱 재배포 (변경사항 적용을 위해)
+
+**방법 2: amplify.yml에서 설정 (비권장 - 보안상 좋지 않음)**
+```yaml
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - export VITE_API_BASE_URL="https://your-api-gateway-url.execute-api.region.amazonaws.com/stage"
+```
+
+> ⚠️ **주의**: 
+> - Vite는 빌드 타임에 환경 변수를 주입하므로, 환경 변수 변경 후 반드시 **재빌드**가 필요합니다.
+> - API Gateway에서 **CORS** 설정이 필요합니다. Amplify 도메인을 허용 목록에 추가하세요.
+>   - `Access-Control-Allow-Origin`: `https://your-amplify-domain.amplifyapp.com`
+>   - `Access-Control-Allow-Methods`: `GET, OPTIONS`
+>   - `Access-Control-Allow-Headers`: `Content-Type`
+
 ### 실행 방법
 개발 모드
 ```bash
@@ -26,9 +63,14 @@ npm run preview
 # http://localhost:4173
 ```
 
+### API 연동
+- **CI/CD 상태 조회**: `GET /api/status/LATEST_EXECUTION` → `GET /api/status/{pipelineId}`
+  - `client/src/hooks/usePipelineStatus.ts`: TanStack Query를 사용한 파이프라인 상태 조회 훅
+  - `client/src/lib/api/cicd.ts`: API 호출 함수
+  - `client/src/types/cicd.ts`: 타입 정의
+
 ### Mock Data
 - `client/src/mock/movement-paths.ts`: 캐릭터 이동 경로를 무작위로 선택하는 Mock JSON 목록입니다.
-- `client/src/components/CICDStatusModal.tsx`: CI/CD 상태 조회 API 명세와 오류 케이스를 정적 JSON으로 제공합니다.
 
 ### 프로젝트 구조
 ```text
