@@ -19,7 +19,7 @@ export function initPipelineId(pipelineId: string) {
   
   // 페이지 리로드하여 적용
   if (import.meta.env.DEV) {
-    console.log("💡 페이지를 새로고침하면 새 pipelineId로 API가 호출됩니다.");
+    console.log("페이지를 새로고침하면 새 pipelineId로 API가 호출됩니다.");
   }
 }
 
