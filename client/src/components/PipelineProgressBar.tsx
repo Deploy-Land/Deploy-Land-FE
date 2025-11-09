@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from "react";
 import { useSourceStage, useBuildStage, useDeployStage, usePipelineStatus } from "../store/pipelineStore";
 
 interface Milestone {
@@ -336,10 +337,34 @@ export function PipelineProgressBar({ isValidationComplete = false }: PipelinePr
   const deployStage = useDeployStage();
   const pipelineStatus = usePipelineStatus();
 
-  const progress = calculateProgress(sourceStage, buildStage, deployStage, pipelineStatus, isValidationComplete);
-  const completedMilestones = getCompletedMilestones(progress);
-  const progressColor = getProgressColor(progress);
-  const statusText = getStatusText(sourceStage, buildStage, deployStage, pipelineStatus, isValidationComplete);
+  // progress 계산 결과 메모이제이션 (의존성 변경 시에만 재계산)
+  // 객체 참조를 의존성으로 사용하여 객체 내용이 변경되면 재계산
+  const progress = useMemo(() => {
+    return calculateProgress(sourceStage, buildStage, deployStage, pipelineStatus, isValidationComplete);
+  }, [sourceStage, buildStage, deployStage, pipelineStatus, isValidationComplete]);
+
+  // 디버깅: stage 상태 변경 감지 로그 (변경될 때만 출력)
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log("🎯 PipelineProgressBar 상태 업데이트:", {
+        source: { status: sourceStage.status, jobs: `${sourceStage.completedJobs}/${sourceStage.totalJobs}`, hasJobs: sourceStage.jobs.length > 0 },
+        build: { status: buildStage.status, jobs: `${buildStage.completedJobs}/${buildStage.totalJobs}`, hasJobs: buildStage.jobs.length > 0 },
+        deploy: { status: deployStage.status, jobs: `${deployStage.completedJobs}/${deployStage.totalJobs}`, hasJobs: deployStage.jobs.length > 0 },
+        pipelineStatus: pipelineStatus?.status,
+        currentStage: pipelineStatus?.currentStage,
+        progress,
+      });
+    }
+  }, [sourceStage, buildStage, deployStage, pipelineStatus, progress]);
+
+  const completedMilestones = useMemo(() => getCompletedMilestones(progress), [progress]);
+  const progressColor = useMemo(() => getProgressColor(progress), [progress]);
+  const statusText = useMemo(() => {
+    return getStatusText(sourceStage, buildStage, deployStage, pipelineStatus, isValidationComplete);
+  }, [sourceStage.status, sourceStage.completedJobs, sourceStage.totalJobs,
+      buildStage.status, buildStage.completedJobs, buildStage.totalJobs,
+      deployStage.status, deployStage.completedJobs, deployStage.totalJobs,
+      pipelineStatus?.status, pipelineStatus?.currentStage, isValidationComplete]);
 
   const componentHeight = 50;
   const lineHeight = componentHeight / 10;

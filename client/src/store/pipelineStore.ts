@@ -212,29 +212,161 @@ function calculateStageStatus(
     };
   }
   
-  // jobs가 있는 경우: 기존 로직 사용
+  // jobs가 있는 경우: pipelineStatus.status를 우선 확인하고, jobs 상태와 결합
   const completedJobs = stageJobs.filter(
     (job) => job.status === "success" || job.status === "failed"
   ).length;
   
   const totalJobs = stageJobs.length;
   
+  // 디버깅: Deploy 단계 상태 계산 로그
+  if (import.meta.env.DEV && stage === "Deploy") {
+    console.log("🔍 Deploy 단계 상태 계산:", {
+      stage,
+      totalJobs,
+      completedJobs,
+      stageJobs: stageJobs.map(j => ({ name: j.name, status: j.status })),
+      pipelineStatus: pipelineStatus?.status,
+      currentStage: pipelineStatus?.currentStage,
+      jobsArrayLength: jobsArray.length,
+    });
+  }
+  
+  // 단계 순서 정의 (currentStage 파싱에 사용)
+  const stageOrder: Record<PipelineStage, number> = { Source: 1, Build: 2, Deploy: 3 };
+  const currentStageLower = currentStage.toLowerCase();
+  
+  // currentStage에서 단계 추출 (대소문자 무시)
+  const getCurrentStageOrder = (): number => {
+    if (!currentStage) return 0;
+    const lower = currentStageLower;
+    if (lower.includes("source")) return 1;
+    if (lower.includes("build")) return 2;
+    if (lower.includes("deploy")) return 3;
+    return 0;
+  };
+  
+  const currentStageOrder = getCurrentStageOrder();
+  const thisStageOrder = stageOrder[stage];
+  
   // 단계 상태 결정 (타입: "STARTED" | "SUCCEEDED" | "FAILED" | "CANCELED")
+  // pipelineStatus.status를 우선 확인하여 API 데이터와 일치시킴
   let status: "STARTED" | "SUCCEEDED" | "FAILED" | "CANCELED" = "STARTED";
   
-  // 파이프라인이 취소된 경우
+  // 1. 파이프라인이 취소된 경우
   if (pipelineStatusUpper === "CANCELED") {
     status = "CANCELED";
   }
-  // 모든 job이 완료되었는지 확인
-  else if (completedJobs === totalJobs) {
-    // 모든 job이 성공하면 SUCCEEDED
-    const allSuccess = stageJobs.every((job) => job.status === "success");
-    status = allSuccess ? "SUCCEEDED" : "FAILED";
-  } else {
-    // 진행 중인 job이 있으면 STARTED (running 상태)
-    const hasRunning = stageJobs.some((job) => job.status === "running");
-    status = hasRunning ? "STARTED" : "STARTED"; // pending도 STARTED로 처리
+  // 2. 파이프라인이 성공한 경우: 모든 단계가 SUCCEEDED로 간주
+  else if (pipelineStatusUpper === "SUCCEEDED" || pipelineStatusUpper === "SUCCESS") {
+    // jobs가 모두 완료되고 성공했는지 확인
+    if (completedJobs === totalJobs && totalJobs > 0) {
+      const allSuccess = stageJobs.every((job) => job.status === "success");
+      status = allSuccess ? "SUCCEEDED" : "FAILED";
+    } else {
+      // jobs가 아직 완료되지 않았지만 파이프라인이 성공했다면
+      // 현재 단계가 이전 단계이거나 현재 단계가 성공한 것으로 간주
+      if (currentStageOrder > 0 && thisStageOrder <= currentStageOrder) {
+        status = "SUCCEEDED";
+      } else if (currentStageOrder === 0) {
+        // currentStage가 없으면 jobs 상태를 확인
+        if (completedJobs === totalJobs && totalJobs > 0) {
+          const allSuccess = stageJobs.every((job) => job.status === "success");
+          status = allSuccess ? "SUCCEEDED" : "FAILED";
+        } else {
+          status = "SUCCEEDED"; // 파이프라인 성공 시 기본적으로 SUCCEEDED
+        }
+      } else {
+        status = "SUCCEEDED"; // 이후 단계도 성공한 것으로 간주
+      }
+    }
+  }
+  // 3. 파이프라인이 실패한 경우: currentStage와 비교하여 실패한 단계 확인
+  else if (pipelineStatusUpper === "FAILED" || pipelineStatusUpper === "FAILURE") {
+    // jobs가 모두 완료되었는지 확인
+    if (completedJobs === totalJobs && totalJobs > 0) {
+      const allSuccess = stageJobs.every((job) => job.status === "success");
+      status = allSuccess ? "SUCCEEDED" : "FAILED";
+    } else {
+      // currentStage와 비교하여 실패한 단계 확인
+      if (currentStageOrder > 0 && thisStageOrder === currentStageOrder) {
+        // 현재 단계가 실패한 단계
+        status = "FAILED";
+      } else if (currentStageOrder > 0 && thisStageOrder < currentStageOrder) {
+        // 이전 단계는 성공한 것으로 간주
+        status = "SUCCEEDED";
+      } else {
+        // 이후 단계는 시작되지 않음 또는 진행 중
+        const hasRunning = stageJobs.some((job) => job.status === "running");
+        status = hasRunning ? "STARTED" : "STARTED";
+      }
+    }
+  }
+  // 4. 파이프라인이 진행 중인 경우: jobs 상태를 기반으로 계산 (우선순위: jobs > currentStage)
+  else {
+    // jobs가 있는 경우: jobs 상태를 우선 확인
+    if (totalJobs > 0) {
+      // 모든 job이 완료되었는지 확인
+      if (completedJobs === totalJobs) {
+        // 모든 job이 성공하면 SUCCEEDED
+        const allSuccess = stageJobs.every((job) => job.status === "success");
+        status = allSuccess ? "SUCCEEDED" : "FAILED";
+      } else {
+        // 진행 중인 job이 있으면 STARTED
+        const hasRunning = stageJobs.some((job) => job.status === "running");
+        const hasPending = stageJobs.some((job) => job.status === "pending");
+        const hasFailed = stageJobs.some((job) => job.status === "failed");
+        
+        if (hasFailed) {
+          status = "FAILED";
+        } else if (hasRunning || hasPending) {
+          status = "STARTED";
+        } else {
+          // jobs가 있지만 상태가 명확하지 않으면 STARTED
+          status = "STARTED";
+        }
+      }
+    } 
+    // jobs가 없는 경우 (totalJobs === 0): currentStage와 비교하여 상태 추론
+    // ⚠️ 주의: jobs가 없으면 실제 job 상태를 알 수 없으므로,
+    // currentStage를 기반으로 상태를 추론
+    else {
+      // currentStage가 현재 단계와 일치하면 STARTED
+      if (currentStageOrder > 0 && thisStageOrder === currentStageOrder) {
+        // 현재 진행 중인 단계 (예: currentStage = "Deploy", stage = "Deploy")
+        status = "STARTED";
+      } else if (currentStageOrder > 0 && thisStageOrder < currentStageOrder) {
+        // 이전 단계는 성공한 것으로 간주 (jobs가 없을 때만)
+        // 예: currentStage = "Build"이고 stage = "Source"인 경우
+        status = "SUCCEEDED";
+      } else if (currentStageOrder > 0 && thisStageOrder > currentStageOrder) {
+        // 이후 단계: jobs가 없으면 아직 시작되지 않음
+        // 예: currentStage = "Build"이고 stage = "Deploy"인 경우
+        // Build가 완료되었다고 해서 Deploy가 자동으로 성공한 것은 아님
+        // 하지만 currentStage가 "Deploy"로 바뀌면 STARTED가 되어야 함
+        // 따라서 jobs가 없어도 currentStage가 이후 단계이면 STARTED로 설정
+        // (실제로는 jobs가 아직 생성되지 않았을 수 있지만, currentStage가 있으면 시작된 것으로 간주)
+        status = "STARTED";
+      } else {
+        // currentStage가 없거나 명확하지 않으면 STARTED
+        status = "STARTED";
+      }
+      
+      // 디버깅: Deploy 단계 jobs 없을 때 상태 계산
+      if (import.meta.env.DEV && stage === "Deploy") {
+        console.log("🔍 Deploy 단계 (jobs 없음) 상태 계산:", {
+          currentStage,
+          currentStageOrder,
+          thisStageOrder,
+          calculatedStatus: status,
+          condition: {
+            isCurrentStage: currentStageOrder > 0 && thisStageOrder === currentStageOrder,
+            isPreviousStage: currentStageOrder > 0 && thisStageOrder < currentStageOrder,
+            isNextStage: currentStageOrder > 0 && thisStageOrder > currentStageOrder,
+          },
+        });
+      }
+    }
   }
   
   return {
@@ -296,15 +428,32 @@ export const usePipelineStore = create<PipelineState>()(
           const buildStage = calculateStageStatus("Build", jobs, status);
           const deployStage = calculateStageStatus("Deploy", jobs, status);
           
-          // 디버깅: 상태 업데이트 로그
+          // 디버깅: 상태 업데이트 로그 (API 데이터와 계산된 상태 비교)
           if (import.meta.env.DEV) {
             console.log("📊 Pipeline Status 업데이트:", {
               pipelineId: status.pipelineId || status.pipelineID,
-              status: status.status,
-              totalJobs: jobs.length,
-              sourceStage: { status: sourceStage.status, jobs: sourceStage.totalJobs },
-              buildStage: { status: buildStage.status, jobs: buildStage.totalJobs },
-              deployStage: { status: deployStage.status, jobs: deployStage.totalJobs },
+              apiStatus: status.status,
+              apiCurrentStage: status.currentStage,
+              apiTotalJobs: status.totalJobs,
+              apiCompletedJobs: status.completedJobs,
+              apiJobsCount: jobs.length,
+              calculatedStages: {
+                source: { 
+                  status: sourceStage.status, 
+                  jobs: `${sourceStage.completedJobs}/${sourceStage.totalJobs}`,
+                  hasJobs: sourceStage.jobs.length > 0
+                },
+                build: { 
+                  status: buildStage.status, 
+                  jobs: `${buildStage.completedJobs}/${buildStage.totalJobs}`,
+                  hasJobs: buildStage.jobs.length > 0
+                },
+                deploy: { 
+                  status: deployStage.status, 
+                  jobs: `${deployStage.completedJobs}/${deployStage.totalJobs}`,
+                  hasJobs: deployStage.jobs.length > 0
+                },
+              },
             });
           }
           
@@ -340,6 +489,8 @@ export const usePipelineStore = create<PipelineState>()(
 );
 
 // 선택자 함수들 (성능 최적화)
+// Zustand는 기본적으로 객체 참조 변경을 감지하므로, 
+// setPipelineStatus에서 새로운 객체를 생성하면 자동으로 리렌더링이 트리거됨
 export const usePipelineId = () => usePipelineStore((state) => state.pipelineId);
 export const usePipelineStatus = () => usePipelineStore((state) => state.pipelineStatus);
 export const useSourceStage = () => usePipelineStore((state) => state.sourceStage);
