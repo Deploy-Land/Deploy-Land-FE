@@ -1,4 +1,4 @@
-import type { PipelineStatus, LatestExecutionResponse } from "@/types/cicd";
+import type { PipelineStatus, LatestExecutionResponse, LastUpdatedResponse, ValidationWebhookResponse } from "@/types/cicd";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -17,7 +17,13 @@ if (!API_BASE_URL && import.meta.env.DEV) {
   );
 }
 
-async function fetchAPI<T>(endpoint: string): Promise<T> {
+async function fetchAPI<T>(
+  endpoint: string,
+  options?: {
+    method?: "GET" | "POST" | "PUT" | "DELETE";
+    body?: unknown;
+  }
+): Promise<T> {
   if (!API_BASE_URL) {
     throw new Error("API_BASE_URL이 설정되지 않았습니다. 환경 변수를 확인해주세요.");
   }
@@ -29,16 +35,20 @@ async function fetchAPI<T>(endpoint: string): Promise<T> {
     ? path  // 개발 환경: Vite 프록시 사용 (상대 경로)
     : `${API_BASE_URL.replace(/\/+$/, "")}${path}`;  // 프로덕션: 직접 호출
   
+  const method = options?.method || "GET";
+  const body = options?.body ? JSON.stringify(options.body) : undefined;
+  
   if (import.meta.env.DEV) {
-    console.log(`API 호출 (${import.meta.env.DEV ? "프록시" : "직접"}): ${url}`);
+    console.log(`API 호출 (${import.meta.env.DEV ? "프록시" : "직접"}): ${method} ${url}`, body ? { body } : "");
   }
 
   try {
     const response = await fetch(url, {
-      method: "GET",
+      method,
       headers: {
         "Content-Type": "application/json",
       },
+      body,
       // CORS 문제 해결을 위한 옵션
       mode: "cors",
       credentials: "omit",
@@ -46,7 +56,16 @@ async function fetchAPI<T>(endpoint: string): Promise<T> {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: response.statusText }));
-      const errorMessage = error.message || `HTTP error! status: ${response.status}`;
+      const errorMessage = error.message || error.error || `HTTP error! status: ${response.status}`;
+      
+      // LAST_UPDATED 엔드포인트의 404 오류는 특별 처리 (백엔드에서 지원하지 않을 수 있음)
+      if (response.status === 404 && endpoint.includes("LAST_UPDATED")) {
+        if (import.meta.env.DEV) {
+          console.warn(`LAST_UPDATED 엔드포인트가 백엔드에서 지원되지 않습니다. [${response.status}]:`, errorMessage);
+        }
+        // 404 오류를 특별한 에러로 throw하지 않고, 호출자가 처리하도록 함
+        throw new Error(`LAST_UPDATED_NOT_SUPPORTED: ${errorMessage}`);
+      }
       
       if (import.meta.env.DEV) {
         console.error(`API 오류 [${response.status}]:`, errorMessage);
@@ -97,7 +116,26 @@ export async function getLatestExecution(): Promise<LatestExecutionResponse> {
   return fetchAPI<LatestExecutionResponse>("/api/status/LATEST_EXECUTION");
 }
 
+export async function getLastUpdated(): Promise<LastUpdatedResponse> {
+  return fetchAPI<LastUpdatedResponse>("/api/status/LAST_UPDATED");
+}
+
 export async function getPipelineStatus(pipelineId: string): Promise<PipelineStatus> {
   return fetchAPI<PipelineStatus>(`/api/status/${pipelineId}`);
+}
+
+/**
+ * 벨리데이션 웹훅 호출
+ * POST /webhook 엔드포인트를 호출하여 Beanstalk 환경 URL을 가져옵니다.
+ * @param body 요청 본문 (선택적, 빈 {}도 가능)
+ * @returns 벨리데이션 웹훅 응답
+ */
+export async function callValidationWebhook(
+  body: Record<string, unknown> = {}
+): Promise<ValidationWebhookResponse> {
+  return fetchAPI<ValidationWebhookResponse>("/webhook", {
+    method: "POST",
+    body,
+  });
 }
 

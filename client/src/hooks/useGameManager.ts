@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { GameCore } from "../game/GameCore";
-import { useAudio } from "../lib/stores/useAudio";
 
 export function useGameManager() {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<GameCore | null>(null);
   const initializedRef = useRef(false);
   const [isGameReady, setIsGameReady] = useState(false);
-  const { setHitSound, setSuccessSound } = useAudio();
 
   useEffect(() => {
     const initializeGame = () => {
@@ -27,12 +25,6 @@ export function useGameManager() {
 
         game.attachCanvas(containerRef.current);
         gameRef.current = game;
-
-        // 오디오 설정
-        const hitAudio = new Audio("/sounds/hit.mp3");
-        const successAudio = new Audio("/sounds/success.mp3");
-        setHitSound(hitAudio);
-        setSuccessSound(successAudio);
 
         // 게임 초기화
         game.initialize();
@@ -61,30 +53,9 @@ export function useGameManager() {
     };
   }, []);
 
-  const handleStartMovement = async () => {
-    if (gameRef.current) {
-      await gameRef.current.startMovement();
-    }
-  };
-
-  const handleReset = () => {
-    if (gameRef.current) {
-      gameRef.current.resetGame();
-    }
-  };
-
-  const handleStageTest = async (stage: "Build" | "Test" | "Deploy", success: boolean) => {
-    if (gameRef.current) {
-      await gameRef.current.testStage(stage, success);
-    }
-  };
-
   return {
     containerRef,
     isGameReady,
-    handleStartMovement,
-    handleReset,
-    handleStageTest,
     gameCoreRef: gameRef,
   };
 }
