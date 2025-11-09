@@ -5,8 +5,7 @@ import { ObstacleManager } from "./entities/Obstacle";
 import { Goal } from "./entities/Goal";
 import { MapSystem } from "./systems/MapSystem";
 import { ParallaxSystem } from "./systems/ParallaxSystem";
-import { getMockMovementPath } from "../mock/movement-paths";
-import type { MovementPath } from "../types/movement";
+import { getMockMovementPath, type MovementPath } from "@shared/map";
 
 export interface GameCoreConfig {
   width: number;
@@ -86,8 +85,7 @@ export class GameCore {
       y: this.k.height() - 130,
     });
 
-    this.obstacleManager.create(300, this.k.height() - 140);
-    this.obstacleManager.create(500, this.k.height() - 140);
+    // 실패 시에만 장애물이 생성되므로 초기화 시에는 생성하지 않음
   }
 
   async startMovement(): Promise<void> {
@@ -102,12 +100,8 @@ export class GameCore {
 
       console.log("Movement path received:", data);
 
+      // 일반 이동 시에는 장애물 생성하지 않음 (실패 시에만 생성)
       this.obstacleManager.destroyAll();
-
-      if (data.hasObstacle) {
-        const obstacleX = this.player.position.x + data.distance / 2;
-        this.obstacleManager.create(obstacleX, this.k.height() - 140);
-      }
 
       const targetX = this.player.position.x + data.distance;
       await this.player.moveToPosition(targetX);
@@ -118,9 +112,8 @@ export class GameCore {
 
   resetGame() {
     this.player.reset(100, this.k.height() - 120);
+    // 실패 시에만 장애물이 생성되므로 리셋 시에는 모든 장애물 제거만 수행
     this.obstacleManager.destroyAll();
-    this.obstacleManager.create(300, this.k.height() - 140);
-    this.obstacleManager.create(500, this.k.height() - 140);
   }
 
   // 각 단계별 성공/실패 테스트 메서드
