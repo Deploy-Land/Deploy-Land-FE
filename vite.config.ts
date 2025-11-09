@@ -39,6 +39,17 @@ export default defineConfig({
           });
         },
       },
+      "/webhook": {
+        target: process.env.VITE_API_BASE_URL || "https://d0079ju0e7.execute-api.ap-northeast-2.amazonaws.com",
+        changeOrigin: true,
+        secure: true,
+        // OPTIONS 요청도 프록시하도록 설정
+        configure: (proxy, _options) => {
+          proxy.on("proxyReq", (proxyReq, req, _res) => {
+            console.log(`[프록시] ${req.method} ${req.url} -> ${proxyReq.path}`);
+          });
+        },
+      },
     },
   },
   build: {

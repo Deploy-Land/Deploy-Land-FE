@@ -25,12 +25,12 @@ interface AudioState {
 export const useAudio = create<AudioState>()(
   persist(
     (set, get) => ({
-      backgroundMusic: null,
-      hitSound: null,
-      successSound: null,
+  backgroundMusic: null,
+  hitSound: null,
+  successSound: null,
       isMuted: false, // Start unmuted
       volume: 0.5, // Default volume 50%
-      
+  
       setBackgroundMusic: (music) => {
         const { volume, isMuted } = get();
         music.volume = isMuted ? 0 : volume;
@@ -39,8 +39,8 @@ export const useAudio = create<AudioState>()(
         music.currentTime = 10;
         set({ backgroundMusic: music });
       },
-      setHitSound: (sound) => set({ hitSound: sound }),
-      setSuccessSound: (sound) => set({ successSound: sound }),
+  setHitSound: (sound) => set({ hitSound: sound }),
+  setSuccessSound: (sound) => set({ successSound: sound }),
       
       setVolume: (volume) => {
         const clampedVolume = Math.max(0, Math.min(1, volume));
@@ -60,51 +60,51 @@ export const useAudio = create<AudioState>()(
           successSound.volume = clampedVolume;
         }
       },
-      
-      toggleMute: () => {
+  
+  toggleMute: () => {
         const { isMuted, backgroundMusic, volume } = get();
-        const newMutedState = !isMuted;
-        
-        set({ isMuted: newMutedState });
-        
+    const newMutedState = !isMuted;
+    
+    set({ isMuted: newMutedState });
+    
         // Update background music volume
         if (backgroundMusic) {
           backgroundMusic.volume = newMutedState ? 0 : volume;
         }
         
-        console.log(`Sound ${newMutedState ? 'muted' : 'unmuted'}`);
-      },
-      
-      playHit: () => {
+    console.log(`Sound ${newMutedState ? 'muted' : 'unmuted'}`);
+  },
+  
+  playHit: () => {
         const { hitSound, isMuted, volume } = get();
-        if (hitSound) {
-          if (isMuted) {
-            console.log("Hit sound skipped (muted)");
-            return;
-          }
-          
-          const soundClone = hitSound.cloneNode() as HTMLAudioElement;
-          soundClone.volume = volume * 0.3; // Hit sound is 30% of master volume
-          soundClone.play().catch(error => {
-            console.log("Hit sound play prevented:", error);
-          });
-        }
-      },
+    if (hitSound) {
+      if (isMuted) {
+        console.log("Hit sound skipped (muted)");
+        return;
+      }
       
-      playSuccess: () => {
+      const soundClone = hitSound.cloneNode() as HTMLAudioElement;
+          soundClone.volume = volume * 0.3; // Hit sound is 30% of master volume
+      soundClone.play().catch(error => {
+        console.log("Hit sound play prevented:", error);
+      });
+    }
+  },
+  
+  playSuccess: () => {
         const { successSound, isMuted, volume } = get();
-        if (successSound) {
-          if (isMuted) {
-            console.log("Success sound skipped (muted)");
-            return;
-          }
-          
-          successSound.currentTime = 0;
+    if (successSound) {
+      if (isMuted) {
+        console.log("Success sound skipped (muted)");
+        return;
+      }
+      
+      successSound.currentTime = 0;
           successSound.volume = volume;
-          successSound.play().catch(error => {
-            console.log("Success sound play prevented:", error);
-          });
-        }
+      successSound.play().catch(error => {
+        console.log("Success sound play prevented:", error);
+      });
+    }
       },
       
       startBackgroundMusic: () => {

@@ -1,13 +1,26 @@
 import { useTranslation } from "react-i18next";
 import { useParallax } from "../hooks/useParallax";
-import { getBackgroundThemeByLanguage, backgroundConfigs } from "../lib/backgroundConfig";
+import { 
+  getBackgroundThemeByStage, 
+  getCurrentPipelineStage,
+  backgroundConfigs 
+} from "../lib/backgroundConfig";
+import { useSourceStage, useBuildStage, useDeployStage } from "../store/pipelineStore";
 
 export function ParallaxBackground() {
   const { i18n } = useTranslation();
   const { skyRef, farRef, midRef, treesRef, nearRef } = useParallax();
   
-  // 현재 언어에 맞는 배경 테마 가져오기
-  const theme = getBackgroundThemeByLanguage(i18n.language);
+  // 파이프라인 단계 상태 가져오기
+  const sourceStage = useSourceStage();
+  const buildStage = useBuildStage();
+  const deployStage = useDeployStage();
+  
+  // 현재 진행 중인 단계 결정
+  const currentStage = getCurrentPipelineStage(sourceStage, buildStage, deployStage);
+  
+  // 단계별 배경 테마 결정
+  const theme = getBackgroundThemeByStage(currentStage, i18n.language);
   const background = backgroundConfigs[theme];
 
   return (

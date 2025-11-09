@@ -1,6 +1,12 @@
 import type { KaboomCtx } from "kaplay";
-import { getBackgroundThemeByLanguage, backgroundConfigs } from "../lib/backgroundConfig";
+import { 
+  getBackgroundThemeByLanguage, 
+  getBackgroundThemeByStage,
+  getCurrentPipelineStage,
+  backgroundConfigs 
+} from "../lib/backgroundConfig";
 import i18n from "../lib/i18n";
+import type { StageStatus } from "../store/pipelineStore";
 
 export function loadCoreAssets(k: KaboomCtx) {
   try {
@@ -28,14 +34,38 @@ export function loadCoreAssets(k: KaboomCtx) {
     
     // 뼈다귀 스프라이트
     k.loadSprite("bone", "/asset/bone.png");
+    
+    // 버그 스프라이트 (장애물)
+    k.loadSprite("bug", "/asset/bug.png");
   } catch {}
 }
 
-export function loadParallaxSprites(k: KaboomCtx) {
+/**
+ * 파이프라인 단계 상태를 기반으로 배경 스프라이트 로드
+ * @param k Kaplay 컨텍스트
+ * @param sourceStage Source 단계 상태 (선택적)
+ * @param buildStage Build 단계 상태 (선택적)
+ * @param deployStage Deploy 단계 상태 (선택적)
+ */
+export function loadParallaxSprites(
+  k: KaboomCtx,
+  sourceStage?: StageStatus,
+  buildStage?: StageStatus,
+  deployStage?: StageStatus
+) {
   try {
-    // 현재 언어에 맞는 배경 테마 가져오기
-    const theme = getBackgroundThemeByLanguage(i18n.language);
-    const background = backgroundConfigs[theme];
+    let theme: string;
+    
+    // 파이프라인 단계 상태가 제공되면 단계별 배경 사용
+    if (sourceStage && buildStage && deployStage) {
+      const currentStage = getCurrentPipelineStage(sourceStage, buildStage, deployStage);
+      theme = getBackgroundThemeByStage(currentStage, i18n.language);
+    } else {
+      // 파이프라인 단계 상태가 없으면 언어별 기본 배경 사용
+      theme = getBackgroundThemeByLanguage(i18n.language);
+    }
+    
+    const background = backgroundConfigs[theme as keyof typeof backgroundConfigs];
     
     k.loadSprite("bg_sky", background.sky);
     k.loadSprite("bg_far", background.far);

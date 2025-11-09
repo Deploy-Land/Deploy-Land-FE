@@ -10,7 +10,7 @@ import {
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
-import { usePipelineStatus } from "@/hooks/usePipelineStatus";
+import type { PipelineStatus } from "@/types/cicd";
 import { Skeleton } from "./ui/skeleton";
 import { ExternalLink, Copy, Check } from "lucide-react";
 
@@ -18,13 +18,24 @@ interface ApiResultModalProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   showTrigger?: boolean;
+  pipelineStatus?: PipelineStatus | null;
+  pipelineId?: string | null;
+  isLoading?: boolean;
+  error?: Error | null;
 }
 
-export function ApiResultModal({ open: controlledOpen, onOpenChange, showTrigger = false }: ApiResultModalProps = {}) {
+export function ApiResultModal({ 
+  open: controlledOpen, 
+  onOpenChange, 
+  showTrigger = false,
+  pipelineStatus,
+  pipelineId,
+  isLoading = false,
+  error = null,
+}: ApiResultModalProps = {}) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
-  const { pipelineStatus, isLoading, error, pipelineId, refetch } = usePipelineStatus();
   
   // 제어되거나 내부 상태 사용
   const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
@@ -47,21 +58,46 @@ export function ApiResultModal({ open: controlledOpen, onOpenChange, showTrigger
   };
 
   const getStatusVariant = (status: string) => {
-    const statusLower = status?.toLowerCase() || "";
-    if (statusLower === "success" || statusLower === "succeeded") {
+    const statusUpper = status?.toUpperCase() || "";
+    // SUCCEEDED 또는 SUCCESS 처리
+    if (statusUpper === "SUCCEEDED" || statusUpper === "SUCCESS") {
       return "default";
     }
-    if (statusLower === "failed" || statusLower === "failure") {
+    // FAILED 또는 FAILURE 처리
+    if (statusUpper === "FAILED" || statusUpper === "FAILURE") {
       return "destructive";
     }
-    if (statusLower === "in_progress" || statusLower === "running") {
+    if (statusUpper === "STARTED") {
       return "secondary";
+    }
+    if (statusUpper === "CANCELED") {
+      return "outline";
     }
     return "outline";
   };
 
   // 실제 API 응답 데이터 (pipelineStatus가 실제 API 응답 형식일 수 있음)
   const apiResponse = pipelineStatus as any;
+  const status = apiResponse?.status?.toUpperCase() || "";
+
+  // 상태에 따른 헤드라인 결정
+  const getDialogTitle = () => {
+    // FAILED 또는 FAILURE 처리
+    if (status === "FAILED" || status === "FAILURE") {
+      return "진짜"; // FAILED 상태일 때 "진짜" 헤드라인
+    }
+    // SUCCEEDED 또는 SUCCESS 처리
+    if (status === "SUCCEEDED" || status === "SUCCESS") {
+      return "파이프라인 성공";
+    }
+    if (status === "STARTED") {
+      return "파이프라인 진행 중";
+    }
+    if (status === "CANCELED") {
+      return "파이프라인 취소됨";
+    }
+    return "API 호출 결과";
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -77,24 +113,17 @@ export function ApiResultModal({ open: controlledOpen, onOpenChange, showTrigger
       )}
       <DialogContent className="max-w-3xl max-h-[85vh] bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 flex flex-col">
         <DialogHeader className="space-y-1 flex-shrink-0">
-          <DialogTitle className="text-base">API 호출 결과</DialogTitle>
+          <DialogTitle className={`text-base ${status === "FAILED" ? "text-destructive font-bold" : ""}`}>
+            {getDialogTitle()}
+          </DialogTitle>
           <DialogDescription className="text-xs">
             Pipeline ID: <code className="text-xs px-1 py-0.5 bg-muted rounded">{pipelineId || "없음"}</code>
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
-          {/* 새로고침 버튼 */}
+          {/* 새로고침 버튼 제거 - props로 pipelineStatus를 받음 */}
           <div className="flex items-center justify-between gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => refetch()}
-              disabled={isLoading}
-              className="text-xs h-7"
-            >
-              {isLoading ? "로딩 중..." : "새로고침"}
-            </Button>
             {pipelineStatus && (
               <Button
                 size="sm"
@@ -156,7 +185,7 @@ export function ApiResultModal({ open: controlledOpen, onOpenChange, showTrigger
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-muted-foreground text-xs">Status:</span>
-                    <Badge variant={getStatusVariant(apiResponse.status)} className="text-xs">
+                    <Badge variant={getStatusVariant(apiResponse.status || "")} className="text-xs">
                       {apiResponse.status || "N/A"}
                     </Badge>
                   </div>
