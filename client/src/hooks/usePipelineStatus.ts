@@ -64,23 +64,31 @@ export function usePipelineStatus(shouldStopPolling: boolean = false) {
       }
     },
     enabled: !shouldStopPolling, // shouldStopPolling이 true이면 비활성화
-    staleTime: 30 * 1000, // 30초간 캐시 사용 (중복 요청 방지)
+    staleTime: 60 * 1000, // refetchInterval과 동일하게 설정 (1분간 캐시 사용, refetchInterval 실행 시 새로 가져옴)
     gcTime: 5 * 60 * 1000, // 5분간 캐시 유지 (구 cacheTime)
     refetchInterval: shouldStopPolling ? false : 60 * 1000, // shouldStopPolling이 true이면 polling 중지, 아니면 1분(60000ms)마다 호출
     retry: 2,
     retryDelay: 1000,
   });
 
-  // LATEST_EXECUTION 응답에서 pipelineId 업데이트
+  // LATEST_EXECUTION 응답에서 pipelineId 업데이트 및 동기화
   useEffect(() => {
     if (latestExecution?.latestExecutionId) {
       const newPipelineId = latestExecution.latestExecutionId;
       const currentId = pipelineId;
       
-      // 유효한 pipelineId가 없거나, 새로운 pipelineId가 현재 pipelineId와 다르면 업데이트
-      if (!isValidPipelineId || newPipelineId !== currentId) {
+      // 새로운 pipelineId가 현재 pipelineId와 다르면 업데이트
+      if (newPipelineId !== currentId) {
         console.log("LATEST_EXECUTION에서 pipelineId 업데이트:", newPipelineId);
         console.log("현재 pipelineId:", currentId);
+        
+        // 이전 pipelineId의 쿼리 취소 (명시적으로 취소하여 일관성 보장)
+        if (currentId) {
+          queryClient.cancelQueries({ 
+            queryKey: ["pipelineStatus", currentId],
+            exact: true 
+          });
+        }
         
         // 새로운 pipelineId 설정
         setPipelineId(newPipelineId);
@@ -88,16 +96,21 @@ export function usePipelineStatus(shouldStopPolling: boolean = false) {
         
         // 새로운 pipelineId로 pipelineStatus 조회하기 위해 캐시 무효화
         queryClient.invalidateQueries({ 
-          queryKey: ["pipelineStatus"],
-          exact: false 
+          queryKey: ["pipelineStatus", newPipelineId],
+          exact: true 
         });
+      } else if (!currentId) {
+        // pipelineId가 없을 때만 초기 설정 (중복 업데이트 방지)
+        setPipelineId(newPipelineId);
+        storePipelineId(newPipelineId);
       }
     }
-  }, [latestExecution, pipelineId, isValidPipelineId, setPipelineId, queryClient]);
+  }, [latestExecution, pipelineId, setPipelineId, queryClient]);
 
-  // 2. 사용할 pipelineId 결정 (latestExecutionId 사용)
-  // 유효한 pipelineId 우선, 없으면 latestExecutionId 사용
-  const currentPipelineId = isValidPipelineId ? pipelineId : latestExecution?.latestExecutionId;
+  // 2. 사용할 pipelineId 결정 (latestExecutionId 우선 사용하여 항상 최신 ID 사용)
+  // latestExecutionId를 우선 사용하여 LATEST_EXECUTION에서 새로운 ID를 받으면 즉시 반영
+  // latestExecutionId가 없을 때만 pipelineId 사용 (초기 로드 시)
+  const currentPipelineId = latestExecution?.latestExecutionId || pipelineId;
 
   // 3. pipelineId로 실제 상태 조회
   // pipelineId가 있을 때만 폴링 시작 (3초마다)
@@ -131,7 +144,7 @@ export function usePipelineStatus(shouldStopPolling: boolean = false) {
       }
     },
     enabled: !!currentPipelineId && !shouldStopPolling, // pipelineId가 있고 shouldStopPolling이 false일 때만 실행
-    staleTime: 2 * 1000, // 2초간 캐시 사용 (중복 요청 방지, 폴링 간격보다 짧게)
+    staleTime: 3000, // refetchInterval과 동일하게 설정 (3초간 캐시 사용, refetchInterval 실행 시 새로 가져옴)
     gcTime: 5 * 60 * 1000, // 5분간 캐시 유지 (구 cacheTime)
     refetchInterval: shouldStopPolling || !currentPipelineId ? false : 3000, // shouldStopPolling이 true이면 polling 중지, 아니면 3초(3000ms)마다 폴링
     retry: 2,
