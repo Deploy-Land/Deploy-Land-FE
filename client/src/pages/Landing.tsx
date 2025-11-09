@@ -8,6 +8,7 @@ import landingLogo from "../asset/landing/landing_logo.png";
 
 export function Landing() {
   const { t } = useTranslation();
+  // Landing 페이지에서는 API 호출하지 않음 (CICDStatusModal에서 필요시 자체 호출)
 
   useEffect(() => {
     // 랜딩 페이지에서 스크롤 가능하도록 설정
@@ -39,10 +40,10 @@ export function Landing() {
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <h1 className="text-lg font-bold tracking-wider text-slate-900 dark:text-white whitespace-nowrap">{t("app.name")}</h1>
           <div className="flex items-center gap-4">
-            <nav className="flex items-center gap-4 text-slate-700 dark:text-slate-200 text-sm">
+          <nav className="flex items-center gap-4 text-slate-700 dark:text-slate-200 text-sm">
               <Link to="/game" className="hover:underline">{t("navigation.play")}</Link>
               <a href="#features" className="hover:underline">{t("navigation.features")}</a>
-            </nav>
+          </nav>
             <LanguageToggle />
           </div>
         </div>

@@ -10,15 +10,43 @@ import {
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
-import { usePipelineStatus } from "@/hooks/usePipelineStatus";
+import type { PipelineStatus } from "@/types/cicd";
 import { useSourceStage, useBuildStage, useDeployStage } from "@/store/pipelineStore";
+import { usePipelineStatus } from "@/hooks/usePipelineStatus";
 import { Skeleton } from "./ui/skeleton";
 
 const endpointPath = "/api/status/{pipelineId}";
 
-export function CICDStatusModal() {
+interface CICDStatusModalProps {
+  pipelineStatus?: PipelineStatus | null;
+  pipelineId?: string | null;
+  isLoading?: boolean;
+  error?: Error | null;
+}
+
+export function CICDStatusModal({
+  pipelineStatus: propPipelineStatus,
+  pipelineId: propPipelineId,
+  isLoading: propIsLoading,
+  error: propError,
+}: CICDStatusModalProps = {}) {
   const { t } = useTranslation();
-  const { pipelineStatus, isLoading, error, pipelineId } = usePipelineStatus();
+  
+  // props가 없을 때만 usePipelineStatus 호출 (Landing 페이지에서 모달 사용 시)
+  // props가 있으면 Game.tsx에서 이미 호출하고 있으므로 중복 호출 방지
+  const hasProps = propPipelineStatus !== undefined || propPipelineId !== undefined;
+  const { 
+    pipelineStatus: hookPipelineStatus, 
+    pipelineId: hookPipelineId, 
+    isLoading: hookIsLoading, 
+    error: hookError 
+  } = usePipelineStatus(hasProps); // props가 있으면 polling 중지 (Game.tsx에서 관리)
+  
+  // props가 있으면 props 사용, 없으면 hook 사용
+  const pipelineStatus = hasProps ? propPipelineStatus : hookPipelineStatus;
+  const pipelineId = hasProps ? propPipelineId : hookPipelineId;
+  const isLoading = hasProps ? (propIsLoading ?? false) : hookIsLoading;
+  const error = hasProps ? propError : hookError;
   
   // 3단계 상태 가져오기
   const sourceStage = useSourceStage();
@@ -119,11 +147,11 @@ export function CICDStatusModal() {
                       <span className="font-medium text-sm">📦 소스 (Source)</span>
                       <Badge
                         variant={
-                          sourceStage.status === "success"
+                          sourceStage.status === "SUCCEEDED"
                             ? "default"
-                            : sourceStage.status === "failed"
+                            : sourceStage.status === "FAILED"
                             ? "destructive"
-                            : sourceStage.status === "running"
+                            : sourceStage.status === "STARTED"
                             ? "secondary"
                             : "outline"
                         }
@@ -164,11 +192,11 @@ export function CICDStatusModal() {
                       <span className="font-medium text-sm">🔨 빌드 (Build)</span>
                       <Badge
                         variant={
-                          buildStage.status === "success"
+                          buildStage.status === "SUCCEEDED"
                             ? "default"
-                            : buildStage.status === "failed"
+                            : buildStage.status === "FAILED"
                             ? "destructive"
-                            : buildStage.status === "running"
+                            : buildStage.status === "STARTED"
                             ? "secondary"
                             : "outline"
                         }
@@ -209,11 +237,11 @@ export function CICDStatusModal() {
                       <span className="font-medium text-sm">🚀 디플로이 (Deploy)</span>
                       <Badge
                         variant={
-                          deployStage.status === "success"
+                          deployStage.status === "SUCCEEDED"
                             ? "default"
-                            : deployStage.status === "failed"
+                            : deployStage.status === "FAILED"
                             ? "destructive"
-                            : deployStage.status === "running"
+                            : deployStage.status === "STARTED"
                             ? "secondary"
                             : "outline"
                         }
