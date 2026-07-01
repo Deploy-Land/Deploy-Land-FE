@@ -103,7 +103,8 @@ export const mockPipelineStatusFailed: PipelineStatus = {
   completedJobs: 1,
 };
 
-// Mock 함수들
+export const pollMeta = { status: 200, dataChanged: true, serverHintMs: undefined as number | undefined };
+
 export const getLatestExecution = vi.fn(async (): Promise<LatestExecutionResponse> => {
   return mockLatestExecution;
 });

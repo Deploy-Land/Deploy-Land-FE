@@ -1,22 +1,23 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
-import { getLatestExecution, getPipelineStatus } from "@/lib/api/cicd";
+import { useEffect, useRef, useCallback } from "react";
+import { getLatestExecution, getPipelineStatus, pollMeta } from "@/lib/api/cicd";
 import { usePipelineStore } from "@/store/pipelineStore";
 import { storePipelineId, clearStoredPipelineId } from "@/lib/storage";
 import type { PipelineStatus } from "@/types/cicd";
 
-/**
- * 파이프라인 상태를 조회하고 zustand store에 저장하는 훅
- * @param shouldStopPolling - polling을 중지할지 여부 (예: Validation 모달이 열렸을 때, Validation 완료 후)
- */
+const POLL_MIN_MS = 1000;
+const POLL_MAX_MS = 10000;
+const POLL_INITIAL_MS = 3000;
+
 export function usePipelineStatus(shouldStopPolling: boolean = false) {
   const queryClient = useQueryClient();
-  // fetchNewPipelineId 실행 중인지 추적 (중복 호출 방지)
   const isFetchingNewIdRef = useRef(false);
-  // 이전 파이프라인 상태를 저장하여 변경 감지 (컴포넌트 레벨에서 관리)
   const previousStatusRef = useRef<PipelineStatus | null>(null);
-  // 새로고침 실행 여부 추적 (중복 새로고침 방지)
   const isReloadingRef = useRef(false);
+
+  // AIMD 적응형 폴링 주기
+  const pollIntervalRef = useRef(POLL_INITIAL_MS);
+  const backoffCountRef = useRef(0);
   
   // Zustand store에서 상태와 액션 가져오기
   const pipelineId = usePipelineStore((state) => state.pipelineId);
@@ -112,9 +113,38 @@ export function usePipelineStatus(shouldStopPolling: boolean = false) {
   // latestExecutionId가 없을 때만 pipelineId 사용 (초기 로드 시)
   const currentPipelineId = latestExecution?.latestExecutionId || pipelineId;
 
-  // 3. pipelineId로 실제 상태 조회
-  // pipelineId가 있을 때만 폴링 시작 (3초마다)
-  // 주의: shouldStopPolling이 true이면 polling 완전히 중지 (Validation 모달이 열렸거나 Validation 완료 후)
+  // AIMD 주기 조절: TCP 혼잡제어에서 차용
+  // 200(변화 있음) → 주기 절반 (Additive Increase 방향으로 빠르게)
+  // 304/204(변화 없음) → 주기 1.5배 (Multiplicative Decrease 방향으로 느리게)
+  // 429/503(스로틀링) → 지수 백오프 + ±20% 지터 (CSMA/CA 충돌 회피)
+  const adjustPollInterval = useCallback(() => {
+    const { status, dataChanged, serverHintMs } = pollMeta;
+
+    // 서버 힌트가 있으면 우선 적용
+    if (serverHintMs) {
+      pollIntervalRef.current = Math.max(POLL_MIN_MS, Math.min(serverHintMs, POLL_MAX_MS));
+      backoffCountRef.current = 0;
+      return;
+    }
+
+    if (status === 429 || status === 503) {
+      // 지수 백오프 + ±20% 지터
+      backoffCountRef.current += 1;
+      const base = POLL_INITIAL_MS * Math.pow(2, backoffCountRef.current);
+      const jitter = base * 0.2 * (Math.random() * 2 - 1);
+      pollIntervalRef.current = Math.min(base + jitter, 30000);
+    } else if (status === 304 || !dataChanged) {
+      // Multiplicative Decrease: 변화 없으면 주기 늘림
+      backoffCountRef.current = 0;
+      pollIntervalRef.current = Math.min(pollIntervalRef.current * 1.5, POLL_MAX_MS);
+    } else {
+      // Additive Increase: 변화 있으면 주기 줄임
+      backoffCountRef.current = 0;
+      pollIntervalRef.current = Math.max(pollIntervalRef.current / 2, POLL_MIN_MS);
+    }
+  }, []);
+
+  // 3. pipelineId로 실제 상태 조회 (AIMD 적응형 폴링)
   const {
     data: pipelineStatus,
     isLoading: isLoadingStatus,
@@ -129,12 +159,13 @@ export function usePipelineStatus(shouldStopPolling: boolean = false) {
       }
       try {
         const status = await getPipelineStatus(currentPipelineId);
+        adjustPollInterval();
         setPipelineId(currentPipelineId);
         storePipelineId(currentPipelineId);
         return status;
       } catch (error) {
+        adjustPollInterval();
         console.error("Pipeline Status 호출 실패:", error);
-        // 404 등으로 pipelineId가 유효하지 않으면 초기화
         if (error instanceof Error && error.message.includes("not found")) {
           if (pipelineId === currentPipelineId) {
             setPipelineId(null);
@@ -143,14 +174,15 @@ export function usePipelineStatus(shouldStopPolling: boolean = false) {
         throw error;
       }
     },
-    enabled: !!currentPipelineId && !shouldStopPolling, // pipelineId가 있고 shouldStopPolling이 false일 때만 실행
-    staleTime: 3000, // refetchInterval과 동일하게 설정 (3초간 캐시 사용, refetchInterval 실행 시 새로 가져옴)
-    gcTime: 5 * 60 * 1000, // 5분간 캐시 유지 (구 cacheTime)
-    refetchInterval: shouldStopPolling || !currentPipelineId ? false : 3000, // shouldStopPolling이 true이면 polling 중지, 아니면 3초(3000ms)마다 폴링
+    enabled: !!currentPipelineId && !shouldStopPolling,
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
+    refetchInterval: shouldStopPolling || !currentPipelineId
+      ? false
+      : () => pollIntervalRef.current,
     retry: 2,
     retryDelay: 1000,
-    // 폴링 시 브라우저 새로고침
-    refetchIntervalInBackground: !shouldStopPolling, // shouldStopPolling이 true이면 백그라운드 폴링도 중지
+    refetchIntervalInBackground: !shouldStopPolling,
   });
 
   // 파이프라인 상태를 zustand store에 동기화

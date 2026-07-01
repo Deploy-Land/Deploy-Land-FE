@@ -2,7 +2,6 @@ import type { PipelineStatus, LatestExecutionResponse, LastUpdatedResponse, Vali
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
-// 디버깅: 환경 변수 로드 확인
 if (import.meta.env.DEV) {
   console.log("환경 변수 체크:", {
     VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
@@ -17,6 +16,16 @@ if (!API_BASE_URL && import.meta.env.DEV) {
   );
 }
 
+// ETag 캐시: endpoint → { etag, data }
+const etagCache = new Map<string, { etag: string; data: unknown }>();
+
+// 마지막 폴링 메타데이터 (AIMD 주기 조절에 사용)
+export const pollMeta = {
+  status: 200,
+  dataChanged: true,
+  serverHintMs: undefined as number | undefined,
+};
+
 async function fetchAPI<T>(
   endpoint: string,
   options?: {
@@ -28,63 +37,84 @@ async function fetchAPI<T>(
     throw new Error("API_BASE_URL이 설정되지 않았습니다. 환경 변수를 확인해주세요.");
   }
 
-  // 개발 환경에서는 Vite 프록시를 통해 호출 (CORS 문제 우회)
-  // 프로덕션에서는 직접 API Gateway 호출
   const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-  const url = import.meta.env.DEV 
-    ? path  // 개발 환경: Vite 프록시 사용 (상대 경로)
-    : `${API_BASE_URL.replace(/\/+$/, "")}${path}`;  // 프로덕션: 직접 호출
-  
+  const url = import.meta.env.DEV
+    ? path
+    : `${API_BASE_URL.replace(/\/+$/, "")}${path}`;
+
   const method = options?.method || "GET";
   const body = options?.body ? JSON.stringify(options.body) : undefined;
-  
+
+  const reqHeaders: Record<string, string> = { "Content-Type": "application/json" };
+  const cached = etagCache.get(endpoint);
+  if (method === "GET" && cached?.etag) {
+    reqHeaders["If-None-Match"] = cached.etag;
+  }
+
   if (import.meta.env.DEV) {
-    console.log(`API 호출 (${import.meta.env.DEV ? "프록시" : "직접"}): ${method} ${url}`, body ? { body } : "");
+    console.log(`API 호출: ${method} ${url}`, cached?.etag ? `[ETag: ${cached.etag}]` : "");
   }
 
   try {
     const response = await fetch(url, {
       method,
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: reqHeaders,
       body,
-      // CORS 문제 해결을 위한 옵션
       mode: "cors",
       credentials: "omit",
     });
 
+    // 304 Not Modified → 캐시된 데이터 반환, 페이로드 전송 0
+    if (response.status === 304 && cached) {
+      pollMeta.status = 304;
+      pollMeta.dataChanged = false;
+      pollMeta.serverHintMs = undefined;
+      const hint = response.headers.get("X-Next-Poll-Ms");
+      if (hint) pollMeta.serverHintMs = parseInt(hint, 10);
+      return cached.data as T;
+    }
+
     if (!response.ok) {
+      // 429 스로틀링 메타 기록
+      pollMeta.status = response.status;
+      pollMeta.dataChanged = false;
+
       const error = await response.json().catch(() => ({ message: response.statusText }));
       const errorMessage = error.message || error.error || `HTTP error! status: ${response.status}`;
-      
-      // LAST_UPDATED 엔드포인트의 404 오류는 특별 처리 (백엔드에서 지원하지 않을 수 있음)
+
       if (response.status === 404 && endpoint.includes("LAST_UPDATED")) {
-        if (import.meta.env.DEV) {
-          console.warn(`LAST_UPDATED 엔드포인트가 백엔드에서 지원되지 않습니다. [${response.status}]:`, errorMessage);
-        }
-        // 404 오류를 특별한 에러로 throw하지 않고, 호출자가 처리하도록 함
         throw new Error(`LAST_UPDATED_NOT_SUPPORTED: ${errorMessage}`);
       }
-      
+
       if (import.meta.env.DEV) {
         console.error(`API 오류 [${response.status}]:`, errorMessage);
-        console.error(`URL: ${url}`);
-        console.error(`응답 헤더:`, Object.fromEntries(response.headers.entries()));
       }
-      
+
       throw new Error(errorMessage);
     }
 
     const data = await response.json();
-    
+
+    // ETag 캐싱
+    const etag = response.headers.get("ETag");
+    if (etag) {
+      const prevData = cached?.data;
+      pollMeta.dataChanged = JSON.stringify(prevData) !== JSON.stringify(data);
+      etagCache.set(endpoint, { etag, data });
+    } else {
+      pollMeta.dataChanged = true;
+    }
+
+    pollMeta.status = 200;
+    const hint = response.headers.get("X-Next-Poll-Ms");
+    pollMeta.serverHintMs = hint ? parseInt(hint, 10) : undefined;
+
     if (import.meta.env.DEV) {
-      console.log(`API 응답:`, data);
+      console.log(`API 응답:`, { etag, hint, dataChanged: pollMeta.dataChanged });
     }
 
     return data;
   } catch (error) {
-    // fetch 자체가 실패한 경우 (CORS, 네트워크 에러 등)
     if (error instanceof TypeError && error.message === "Failed to fetch") {
       const detailedError = new Error(
         `API 요청 실패: ${error.message}\n` +
@@ -94,20 +124,8 @@ async function fetchAPI<T>(
         `2. 네트워크 연결 문제 - API Gateway URL을 확인해주세요\n` +
         `3. API Gateway가 실행 중이 아닐 수 있습니다`
       );
-      
-      if (import.meta.env.DEV) {
-        console.error("Fetch 실패 상세 정보:", {
-          error,
-          url,
-          origin: window.location.origin,
-          userAgent: navigator.userAgent,
-        });
-      }
-      
       throw detailedError;
     }
-    
-    // 다른 에러는 그대로 throw
     throw error;
   }
 }

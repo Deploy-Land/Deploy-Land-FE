@@ -6,11 +6,11 @@ import { usePipelineStatus } from "../usePipelineStatus";
 import * as cicdApi from "@/lib/api/cicd";
 import { usePipelineStore } from "@/store/pipelineStore";
 
-// Mock API 함수들
 vi.mock("@/lib/api/cicd", () => ({
   getLatestExecution: vi.fn(),
   getLastUpdated: vi.fn(),
   getPipelineStatus: vi.fn(),
+  pollMeta: { status: 200, dataChanged: true, serverHintMs: undefined },
 }));
 
 // Mock storage
